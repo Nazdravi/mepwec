@@ -26,7 +26,7 @@ Commands summary
  display|disp on|off
  paths|path
 ```
-`playersvc` uses Gwenview for photos, SMplayer for audio and VLC for video. `/etc/playersvc.conf` defines the root paths to media content which can be browsed through the web interface.
+`playersvc` uses Gwenview for photos, SMplayer for audio and VLC for video. `/etc/playersvc.conf` defines the root paths to media content which can be browsed through the web interface, e.g.:
 ```
 pi@media-pi:~ $ cat /etc/playersvc.conf 
 /<PATH TO PHOTOS DIRECTORY>/
