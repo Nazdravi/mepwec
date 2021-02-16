@@ -7,7 +7,7 @@ MEdia Player WEb Control (control photo, audio and video play from local sources
 * server-side lua code for the web interface, running under nginx web server
 * web-page (Bootstrap4-based) with embedded javascript
 
-In the development installation this applications are installed on a raspberry Pi4.
+> In the development installation this applications are installed on a raspberry Pi4.
 ### The service component `"playersvc"`
 is startet with autostart as user "pi" from the graphical user user interface (`lxterminal --command="<PATH TO APPLICATION>/playersvc"`). The service component exposes its command interface over a pseudo terminal thats name can be read from `/var/run/playersvc.pts`. These commands can be issued to the service component:
 
