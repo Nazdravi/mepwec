@@ -34,3 +34,6 @@ pi@media-pi:~ $ cat /etc/playersvc.conf
 /<PATH TO VIDEO DIRECTORIES>/
 ```
 For separate testing the server components pseudo terminal can be connected to by some terminal application (e.g. minicom) and commands (as described above) can be issued.
+
+### The web server lua application (runs within nginx)
+The server-side program installation consists of then `file-walk` and `pts-interact` lua-scripts. The path to the lua scripts has to be specified in the nginx configuration file `nginx.conf`: `lua_package_path "/var/www/lua/?.lua;;";`. The nginx default server configuration `default` defines the two locations `/` and `/media` which deliver the index page and the command interface.
