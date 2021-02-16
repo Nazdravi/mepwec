@@ -37,6 +37,7 @@ For separate testing the server components pseudo terminal can be connected to b
 
 ### The web server lua application (runs within nginx)
 The server-side program installation consists of then `file-walk` and `pts-interact` lua-scripts. The path to the lua scripts has to be specified in the nginx configuration file `nginx.conf`: `lua_package_path "/var/www/lua/?.lua;;";`. The nginx default server configuration `default` defines the two locations `/` and `/media` which deliver the index page and the command interface.
+The server-side lua scripts add file browsing functionality `ls`-command to the service component's functions.
 
 ### Index page / user interface
 `index.shtml` contains all client-side presentation stuff. This page uses SSI and is built on Bootstrap4 (at the moment nearly no work has been spent on design issues).
