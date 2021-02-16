@@ -1,0 +1,722 @@
+ <!DOCTYPE html>
+<html lang="de">
+<head>
+  <title>Media Play Web Control</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css" integrity="sha384-lZN37f5QGtY3VHgisS14W3ExzMWZxybE1SJSEsQp9S+oqd12jhcu+A56Ebc1zFSJ" crossorigin="anonymous">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <style type="text/css">
+      div.row > div.col, div.row > div.flex-col {
+          min-width: 8em;
+          align-content: center;
+      }
+      div#openselect, div#errorlist {
+          z-index: 99;
+      }
+      div#waiting {
+          z-index: 100;
+          width: 100px;
+          height: 100px;
+      }
+      div#openselect p#up {
+          margin-top: 16px;
+          margin-bottom: 4px;
+      }
+      div#openselect p#down {
+          margin-bottom: 0px;
+      }
+      div#openselect > div > ul > li > button.btn {
+          border: none;
+          outline: none;
+          padding-top: 2px;
+          padding-bottom: 0px;
+      }
+      span#space {
+          min-width: 3em;
+      }
+      div#errorlist ul {
+          min-width: 8em;
+          min-height: 10em;
+      }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <!-- error exclamation and errors list ================================================================================================================ -->
+    <div id="error" class="position-absolute d-none">
+        <i class="fas fa-exclamation-circle text-danger display-4" onclick="displayErrors(true);"></i>
+    </div>
+    <div id="errorlist" class="position-absolute bg-danger rounded-lg d-none">
+        <div class="row">
+            <div class="col-auto">
+                <span class="badge badge-danger">Errors</span>
+            </div>
+            <div class="col-auto ml-auto">
+                <span class="badge badge-danger ml-2" onclick="displayErrors(false);"><i class="fas fa-times mx-2"></i></span>
+            </div>
+        </div>
+        <div class="bg-light border border-danger rounded-lg">
+            <ul id="list" class="list-unstyled mx-1 mb-0">
+                <template id="error">
+                    <li><span class="text-danger"></span></li>
+                </template>
+            </ul>
+        </div>
+        <div class="row">
+            <div class="col-auto ml-auto">
+                <span class="badge badge-danger" onclick="insertErrorEntry(null); displayErrors(false);">clear all <i class="fas fa-folder-minus"></i></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- waiting spinner ================================================================================================================================== -->
+    <div id="waiting" class="position-absolute spinner-border text-primary d-none">
+    </div>
+    
+    <!-- file selection "popup" =========================================================================================================================== -->
+    <div id="openselect" class="position-absolute bg-primary rounded-lg d-none">
+        <div class="row">
+            <div class="col-auto">
+                <span id="back" class="badge badge-primary" onclick="fileSelected('..');"><i class="fas fa-chevron-left mx-2"></i></span>
+            </div>
+            <div class="col-auto">
+                <span id="title" class="badge badge-primary"><!-- location label --></span>
+            </div>
+            <div class="col-auto ml-auto">
+                <span class="badge badge-primary ml-2" onclick="fileSelect(true);"><i class="fas fa-times mx-2"></i></span>
+            </div>
+        </div>
+        <div class="bg-light border border-primary rounded-lg">
+            <p id="up">
+                <span class="badge badge-primary ml-4" onclick="fileListOffset(-1);"><i class="fas fa-chevron-up mx-2"></i></span>
+                <span id="top" class="badge badge-primary ml-1" onclick="fileListOffset('top');"><i class="fas fa-angle-double-up mx-2"></i>()</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(-10);">-10</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(-100);">-100</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(-1000);">-1000</span>
+            </p>
+            <ul id="list" class="list-unstyled mb-0">
+                <template id="fileselect">
+                    <li><button type="button" class="btn btn-link btn-sm ml-4" onclick="fileSelected(this.innerText);"></button></li>
+                </template>
+            </ul>
+            <p id="down">
+                <span class="badge badge-primary ml-4" onclick="fileListOffset(1);"><i class="fas fa-chevron-down mx-2"></i></span>
+                <span id="bottom" class="badge badge-primary ml-1" onclick="fileListOffset('bottom');"><i class="fas fa-angle-double-down mx-2"></i>()</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(10);">+10</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(100);">+100</span>
+                <span class="badge badge-primary ml-1" onclick="fileListOffset(1000);">+1000</span>
+            </p>
+        </div>
+    </div>
+
+
+    <div id="hostname" class="float-right"><h4 class="px-2"><span class="badge badge-dark"><!--# echo var="host" default="no hostname" --></span></h4></div>
+    <h1><span class="badge badge-primary mr-2"><i class="fas fa-play-circle" ondblclick="displayError(true);"></i></span>Media Remote Control</h1>
+    <p class="bg-dark text-white px-2">play and control photo, audio and video via web interface</p>
+    <!-- file open section ================================================================================================================================ -->
+    <div id="open_file" class="form-group border border-primary rounded-lg">
+        <div class="row ml-4">
+            <div class="flex-col flex-grow-0">
+                <i class="fas fa-external-link-square-alt text-primary display-2 mr-2"></i>
+            </div>
+            <div class="col mw-100 flex-grow-1">
+                <h2 for="open_file">Select Media:</h2>
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="button" id="openselect" class="btn btn-primary" onclick="requestFileNav(); fileSelect();"><i class="fas fa-home mx-2"></i></button>
+                        <button type="button" id="openselect" class="btn btn-primary ml-1" onclick="fileSelect();"><i class="fas fa-chevron-down mx-2"></i></button>
+                    </div>
+                    <div class="col-auto">
+                        <input type="text" placeholder="media path" id="media_path" name="mediaPath" size="50" onchange="activateMediaTypes(this.value);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();">
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" id="open_foto" class="btn btn-primary d-none" onclick="fileOpen('foto');">Foto</button>
+                        <button type="button" id="open_audio" class="btn btn-primary ml-1 d-none" onclick="fileOpen('audio');">Audio</button>
+                        <button type="button" id="open_video" class="btn btn-primary ml-1 d-none" onclick="fileOpen('video');">Video</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+    <!-- foto control section ============================================================================================================================= -->
+    <div id="foto" class="form-group border border-primary rounded-lg">
+        <div class="float-right">
+            <button type="button" class="btn btn-primary" onclick="interact(callParameters('close', 'foto'), processResponse);"><i class="fas fa-times mx-2"></i></button>
+        </div>
+        <div class="row ml-4">
+            <div class="flex-col flex-grow-0">
+                <i class="fas fa-images text-primary display-3 ml-2 mt-2 mr-2"></i>
+            </div>
+            <div class="col mw-100 flex-grow-1">
+                <h2 for="fotos">Foto:<small><span id="foto" class="ml-4"></span></small></h2>
+                <p>
+                    <button type="button" class="btn btn-primary" onclick="interact(callParameters('play', 'foto', 'prev'), processResponse);"><i class="fas fa-step-backward mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'slideshow', 'stop'), processResponse);"><i class="fas fa-stop mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'foto', 'next'), processResponse);"><i class="fas fa-step-forward mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'slideshow'), processResponse);"><i class="fas fa-forward mx-2"></i></button>
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- audio control section ============================================================================================================================ -->
+    <div id="audio" class="form-group border border-primary rounded-lg">
+        <div class="float-right">
+            <button type="button" class="btn btn-primary" onclick="interact(callParameters('close', 'audio'), processResponse);"><i class="fas fa-times mx-2"></i></button>
+        </div>
+        <div class="row ml-4">
+            <div class="flex-col flex-grow-0">
+                <i class="fas fa-file-audio text-primary display-3 ml-2 mt-2 mr-2"></i>
+            </div>
+            <div class="col mw-100 flex-grow-1">
+                <h2 for="audio">Audio:<small><span id="audio" class="ml-4"></span></small></h2>
+                <p>
+                    <button type="button" class="btn btn-primary" onclick="interact(callParameters('play', 'audio', 'pause'), processResponse);"><i class="fas fa-pause mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'audio', 'play'), processResponse);"><i class="fas fa-play mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'audio', 'next'), processResponse);"><i class="fas fa-step-forward mx-2"></i></button>
+                </p>
+            </div>
+        </div>
+    </div>
+    <!-- video control section ============================================================================================================================ -->
+    <div id="video" class="form-group border border-primary rounded-lg">
+        <div class="float-right">
+            <button type="button" class="btn btn-primary" onclick="interact(callParameters('close', 'video'), processResponse);"><i class="fas fa-times mx-2"></i></button>
+        </div>
+        <div class="row ml-4">
+            <div class="flex-col flex-grow-0">
+                <i class="fas fa-file-video text-primary display-3 ml-2 mt-2 mr-2"></i>
+            </div>
+            <div class="col mw-100 flex-grow-1">
+                <h2 for="video">Video:<small><span id="video" class="ml-4"></span></small></h2>
+                <p>
+                    <button type="button" class="btn btn-primary" onclick="interact(callParameters('play', 'video', 'pause'), processResponse);"><i class="fas fa-pause mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'video', 'play'), processResponse);"><i class="fas fa-play mx-2"></i></button>
+                </p>
+            </div>
+        </div>
+    </div>
+  </div>
+
+<!-- ================================================================================== -->
+<script type="text/javascript">
+    var debug = true;
+    const playerApp = { 'Gwenview':'foto', 'vlc':'video', 'smplayer':'audio', };
+    var openQueries = 0;
+    var fileNav = null;
+    var fileEntryGeometry = null;
+    var listedFileEntries = { 'ofs':0, 'count':0, };
+    var mediaTypes = { 'foto':['.jpg', '.jpeg', '.png'], 'audio':['.mp3', '.m3u'], 'video':['.mp4', '.mpg', '.mov', '.flv', '.vob', 'video_ts/', /* ['video_ts/', 'dvd:/'] */ ],  };
+    var defaultFiles = [ 'playlist.m3u', 'video_ts/' ];
+
+
+    function log(text) {
+        if (debug) {
+            console.log(text);
+        }
+    }
+    
+    function callParameters(command = null, player = null, action = null) {
+        var result = '';
+        if (command !== null) { result += (result === '' ? '?' : '&') + 'c=' + command; }
+        if (player !== null) { result += (result === '' ? '?' : '&') + 'p=' + player; }
+        if (action !== null) { result += (result === '' ? '?' : '&') + 'a=' + action; }
+        return result;
+    }
+    
+    function displayElement(element = null, display = null) {
+        var result = null;
+        if (element != null) {
+            var status = (element.classList.contains("d-none") ? false : true)
+            if ((display == true) && (!status)) { element.classList.remove('d-none'); }
+            if ((display == false) && status) { element.classList.add('d-none'); }
+            result = (element.classList.contains("d-none") ? false : true);
+        }
+        return result;
+    }
+    
+    function displayWaiting(display = true) {
+        var element = document.querySelector("div#waiting");
+        displayElement(element, display);
+        if (display) {
+            var filesRect = document.querySelector("div#openselect").getBoundingClientRect();
+            element.style.marginTop = ""+(filesRect.top + filesRect.height/2 - element.style.height/2)+"px";
+            element.style.marginLeft = ""+(filesRect.left + filesRect.width/2 - element.style.width/2)+"px";
+        }
+    }
+    
+    function displayError(display = true) {
+        var element = document.querySelector("div#error");
+        displayElement(element, display);
+        if (display) {
+            var hostnameRect = document.querySelector("div#hostname").getBoundingClientRect();
+            element.style.marginTop = "0px";
+            element.style.marginLeft = ""+(hostnameRect.left - element.clientWidth*6/5)+"px";
+        }
+    }
+    
+    function displayErrors(display = true) {
+        var element = document.querySelector("div#errorlist");
+        displayElement(element, display);
+        if (display) {
+            var errorIconRect = document.querySelector("div#error").getBoundingClientRect();
+            element.style.marginTop = "1em";
+            element.style.marginLeft = ""+Math.min(window.innerWidth - element.clientWidth*6/5, errorIconRect.left)+"px";
+        }
+    }
+    
+    function insertErrorEntry(message = null) {
+        var result = 0;
+        var templateEntry = document.querySelector("template#error").content;
+        var list = document.querySelector("div#errorlist ul#list");
+        if (message == null) {
+            var deleteItem = null;
+            while (deleteItem = list.querySelector("li")) {
+                list.removeChild(deleteItem);
+            }
+        } else {
+            var clone = document.importNode(templateEntry, true);
+            var span = clone.querySelector("span");
+            span.innerText = message;
+            list.appendChild(clone);
+            result = list.childNodes.length;
+        }
+        return result;
+    }
+    
+    function displayTopic(topic, display = true) {
+        var element = document.querySelector("div#"+topic);
+        displayElement(element, display);
+    }
+    
+    function displayTitle(topic, title = null) {
+        var element = document.querySelector("span#"+topic);
+        if (element) {
+            element.innerHTML = ( title === null ? '' : title );
+        }
+    }
+    
+    function formatTitle(url) {
+        var result = url;
+        var urlCodes = { '%20':' ', '%25':'%', '%26':'&', '%28':'(', '%29':')', };
+        for (const [key, value] of Object.entries(urlCodes)) {
+            result = result.replaceAll(key, value);
+        }
+        var match = result.match(/\/([^\/]+\/[^\/]+)$/);
+        if (match != null) {
+            result = match[1];
+        }
+        return result;
+    }
+    
+    function processResponse(response = null) {
+        var result = {};
+        if (response !== null) {
+            var responseLines = response.split(/[\r\n]+/);
+            var stage = 'params';
+            for (const line of responseLines) {
+                var snippets = line.split(/\s*:\s+/);
+                switch (stage) {
+                    case 'params':
+                        switch (snippets[0]) {
+                            case 'command':
+                            case 'player':
+                            case 'action':
+                                result[snippets[0]] = snippets[1];
+                                break;
+                            case 'execution result':
+                                stage = ((result['command'] == 'play') && (result['action'] == 'allstatus') ? 'result.list' : 
+                                        ((result['command'] == 'ls') || (result['command'] == 'paths') ? 'result.ls' : 'result'));
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case 'result':
+                        if (line == '<<<') { stage = 'closed'; } else {
+                            if (!('response' in result)) { result['response'] = []; }
+                            result['response'].push(line);
+                        }
+                        break;
+                    case 'result.list':
+                        if (line == '---') { 
+                            for (var app in playerApp) {
+                                // display or hide topic block
+                                displayTopic(playerApp[app], playerApp[app] in result);
+                            }
+                            stage = 'result.status';
+                        } else {
+                            if (line in playerApp) {
+                                // create empty object for foto/video/audio topic
+                                if (!(playerApp[line] in result)) { result[playerApp[line]] = {}; }
+                            }
+                        }
+                        break;
+                    case 'result.status':
+                        if (line == '---') { stage = 'result.metadata'; } else {
+                            if (!('status' in result)) { result['status'] = []; }
+                            result['status'].push(line);
+                        }
+                        break;
+                    case 'result.metadata':
+                        if (line == '<<<') { stage = 'closed'; } else {
+                            if (!('metadata' in result)) { result['metadata'] = []; }
+                            result['metadata'].push(line);
+                            var match = line.match(/(\w+)\s+\w+\:(url)\s+([\/\w].+)/);
+                            if (match !== null) {
+                                // Gwenview xesam:title               Schwerin-2009-H3402.jpg
+                                log("Element title: "+JSON.stringify(match));
+                                for (var app in playerApp) {
+                                    if (app == match[1]) {
+                                        displayTitle(playerApp[app], formatTitle(match[3]));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    case 'result.ls':
+                        if (line == '<<<') { stage = 'closed'; } else {
+                            var processed = false;
+                            if ((!processed) && (!('ls.count' in result))) {  // element counts (directories and files) and result window (offset, count)
+                                var match = line.match(/^(\d+),(\d+)==(\d+),(\d+)$/);
+                                if (match !== null) {
+                                    result['ls.count'] = [ parseInt(match[1], 10), parseInt(match[2], 10) ];
+                                    result['ls.range'] = [ parseInt(match[3], 10), parseInt(match[4], 10) ];
+                                    processed = true;
+                                }
+                            }
+                            if ((!processed) && (!('ls.count' in result))) {  // working directory (or root directories list)
+                                var match = line.match(/^(\/.+\/)$/);
+                                if (match !== null) {
+                                    if (!('ls.pwd' in result)) { result['ls.pwd'] = []; }
+                                    result['ls.pwd'].push(match[1]);
+                                    processed = true;
+                                }
+                            }
+                            if ((!processed) && ('ls.count' in result)) {
+                                var match = line.match(/^(\w+.*\/)$/); // directory entry (starts with word character and ends with '/')
+                                if (match !== null) {
+                                    if (!('ls.dirs' in result)) { result['ls.dirs'] = []; }
+                                    result['ls.dirs'].push(match[1]);
+                                    processed = true;
+                                } else {
+                                    match = line.match(/^(\w+.*)$/);  // file entry (starts with word character)
+                                    if (match !== null) {
+                                        if (!('ls.files' in result)) { result['ls.files'] = []; }
+                                        result['ls.files'].push(match[1]);
+                                        processed = true;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+            log("processResponse: "+JSON.stringify(result));
+        }
+        openQueries--;
+        return result;
+    }
+
+    function interact(data = null, responseHandler = null) {
+        if (data !== null) {
+            openQueries++;
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/media" + data, true);
+            xhr.setRequestHeader('Content-Type', 'text/plain');
+            xhr.onreadystatechange = function() {
+                if (this.readyState == 4) {
+                    switch (this.status) {
+                        case 200:
+                            log('interact (finished): ' + this.responseText);
+                            if (responseHandler !== null) { responseHandler(this.responseText); }
+                            break;
+                        default:
+                            displayWaiting(false);
+                            log('interact (failed): ' + this.status + "\n" + this.responseText);
+                            insertErrorEntry(new Date().toLocaleTimeString() + ': interact failed (' + this.status + ')');
+                            displayError(true);
+                            break;
+                    }
+                }
+            };
+            xhr.send();
+        }
+    }
+    
+    function requestStatus() {
+        if (document.hasFocus() && (openQueries == 0)) {
+            interact(callParameters('play', '', 'allstatus'), processResponse);
+        }
+    }
+    
+    function processResponseResult(response = null) {
+        var result = processResponse(response);
+        switch (result['command']) {
+            case 'ls':
+                var openNav = (fileNav != null);
+                fileNav = result;
+                var element = document.querySelector("div#openselect");
+                if (displayElement(element) == true) {
+                    fileSelect();
+                    displayWaiting(false);
+                }
+                activateMediaTypes();
+                break;
+        }
+    }
+    
+    function requestFileNav() {
+        interact(callParameters('ls'), processResponseResult);
+    }
+    
+    function insertFileEntries(offset, isRoot = false) {
+        var result = 0;
+        var templateEntry = document.querySelector("template#fileselect").content;
+        var list = document.querySelector("div#openselect ul#list");
+        var deleteItem = null;
+        while (deleteItem = list.querySelector("li")) {
+            list.removeChild(deleteItem);
+        }
+        if (isRoot) {
+            for (var path in fileNav['ls.pwd']) {
+                var clone = document.importNode(templateEntry, true);
+                var button = clone.querySelector("button");
+                button.innerText = fileNav['ls.pwd'][path];
+                list.appendChild(clone);
+                result++;
+            }
+        } else {
+            var listHeight = 0;
+            for (var idx = offset; idx < offset+50; idx++) {
+                if (fileEntryGeometry) {
+                    listHeight += fileEntryGeometry.height;
+                    if ((fileEntryGeometry.bottom + listHeight) > (window.innerHeight * 0.95 - 2 * fileEntryGeometry.height)) { break; }
+                }
+                if (idx >= fileNav['ls.range'][0] + (('ls.dirs' in fileNav) ? fileNav['ls.dirs'].length : 0) + (('ls.files' in fileNav) ? fileNav['ls.files'].length : 0)) {
+                    break;
+                }
+                var clone = document.importNode(templateEntry, true);
+                var button = clone.querySelector("button");
+                if (('ls.dirs' in fileNav) && (idx < fileNav['ls.range'][0] + fileNav['ls.dirs'].length)) {
+                    button.innerText = fileNav['ls.dirs'][idx - fileNav['ls.range'][0]];
+                } else {
+                    button.innerText = fileNav['ls.files'][idx - fileNav['ls.range'][0] - (('ls.dirs' in fileNav) ? fileNav['ls.dirs'].length : 0)];
+                }
+                list.appendChild(clone);
+                result++;
+            }
+        }
+        return result;
+    }
+    
+    function calculateTopBottom() {
+        document.querySelector("div#openselect p#up > span#top").childNodes[1].data = (listedFileEntries['ofs'] > 0 ? '(-'+listedFileEntries['ofs'].toString()+')' : ' ');
+        document.querySelector("div#openselect p#down > span#bottom").childNodes[1].data = 
+            (listedFileEntries['ofs'] + listedFileEntries['count'] < fileNav['ls.count'][0] + fileNav['ls.count'][1] ?
+            '(+'+(fileNav['ls.count'][0] + fileNav['ls.count'][1] - (listedFileEntries['ofs'] + listedFileEntries['count'])).toString()+')' : ' ');
+    }
+    
+    function fileListOffset(offset = 0) {
+        switch (offset) {
+            case "top":
+                listedFileEntries['ofs'] = 0;
+                break;
+            case "bottom":
+                listedFileEntries['ofs'] = fileNav['ls.count'][0] + fileNav['ls.count'][1] - listedFileEntries['count'];
+                break;
+            default:
+                if (offset > 0) {
+                    if (fileNav['ls.count'][0] + fileNav['ls.count'][1] > offset + listedFileEntries['ofs'] + listedFileEntries['count']) {
+                        listedFileEntries['ofs'] = listedFileEntries['ofs'] + offset;
+                    } else {
+                        listedFileEntries['ofs'] = fileNav['ls.count'][0] + fileNav['ls.count'][1] - listedFileEntries['count'];
+                    }
+                }
+                if (offset < 0) {
+                    if (listedFileEntries['ofs'] > -offset) {
+                        listedFileEntries['ofs'] = listedFileEntries['ofs'] + offset;
+                    } else {
+                        listedFileEntries['ofs'] = 0;
+                    }
+                }
+                break;
+        }
+        if ((listedFileEntries['ofs'] >= fileNav['ls.range'][0]) && (listedFileEntries['ofs'] + listedFileEntries['count'] <= fileNav['ls.range'][0] + fileNav['ls.range'][1])) {
+            listedFileEntries['count'] = insertFileEntries(listedFileEntries['ofs']);
+            calculateTopBottom();
+            displayElement(document.querySelector("div#openselect p#up"), listedFileEntries['ofs'] > 0);
+            displayElement(document.querySelector("div#openselect p#down"), listedFileEntries['ofs'] + listedFileEntries['count'] < fileNav['ls.count'][0] + fileNav['ls.count'][1]);
+        } else {
+            var loadOffset = (listedFileEntries['ofs'] > 250 ? listedFileEntries['ofs'] - 250 : 0);
+            if (fileNav['ls.count'][0] + fileNav['ls.count'][1] <= 1000) { loadOffset = 0; }
+            if (loadOffset + 1000 > fileNav['ls.count'][0] + fileNav['ls.count'][1]) {
+                loadOffset = fileNav['ls.count'][0] + fileNav['ls.count'][1] - 1000;
+            }
+            displayWaiting(true);
+            interact(callParameters('ls', fileNav['ls.pwd'][0], loadOffset.toString()+',1000'), processResponseResult);
+        }
+    }
+    
+    function defaultFile(fileName = null) {
+        var result = fileName;
+        var hasMediaContent = false;
+        if ((result != null) && (result.endsWith('/')) && (fileNav != null)) {
+            for (var defaultFile in defaultFiles) {
+                if ('ls.dirs' in fileNav) {
+                    for (var dir in fileNav['ls.dirs']) {
+                        if (defaultFiles[defaultFile].toLowerCase() == fileNav['ls.dirs'][dir].toLowerCase()) {
+                            result = result + fileNav['ls.dirs'][dir];
+                            hasMediaContent = true;
+                            break;
+                        }
+                    }
+                    if (hasMediaContent) { break; }
+                }
+                if ('ls.files' in fileNav) {
+                    for (var file in fileNav['ls.files']) {
+                        if (defaultFiles[defaultFile].toLowerCase() == fileNav['ls.files'][file].toLowerCase()) {
+                            result = result + fileNav['ls.files'][file];
+                            hasMediaContent = true;
+                            break;
+                        }
+                    }
+                    if (hasMediaContent) { break; }
+                }
+            }
+        }
+        return result;
+    }
+    
+    function activateMediaTypes(fileName = null) {
+        var result = null;
+        if (fileName == null) {
+            var element = document.querySelector("div#open_file input#media_path");
+            if ((element != null) && (element.value.length > 0)) {
+                fileName = element.value;
+            }
+        }
+        fileName = defaultFile(fileName);
+        if (fileName != null) {
+            for (var topic in mediaTypes) {
+                for (var test in mediaTypes[topic]) {
+                    if (Array.isArray(mediaTypes[topic][test])) {
+                        if (fileName.toLowerCase().endsWith(mediaTypes[topic][test][0].toLowerCase())) {
+                            result = topic;
+                            break;
+                        }
+                    } else {
+                        if (fileName.toLowerCase().endsWith(mediaTypes[topic][test].toLowerCase())) {
+                            result = topic;
+                            break;
+                        }
+                    }
+                }
+                if (result != null) { break; }
+            }
+        }
+        for (var topic in mediaTypes) {
+            displayElement(document.querySelector("div#open_file button#open_"+topic), result == topic);
+        }
+        return result;
+    }
+    
+    function fileSelected(fileName = null) {
+        if (fileName == '..') {
+            fileSelected(fileNav['ls.pwd'][0].match(/^(\/.+\/)[^\/]+\/$/)[1]);
+        } else {
+            var filePath = (fileName.substring(0,1) != '/' ? fileNav['ls.pwd'][0] : "") + fileName;
+            listedFileEntries['ofs'] = 0;
+            log('fileSelected: ' + (fileName != null ? fileName : '<NULL>'));
+            if (fileName.endsWith('/')) {
+                displayWaiting(true);
+                interact(callParameters('ls', filePath, '0,1000'), processResponseResult);
+            } else {
+                fileSelect(true);
+                activateMediaTypes(filePath);
+            }
+            document.querySelector("div#open_file input#media_path").value = filePath;
+        }
+    }
+    
+    function fileSelect(close = false) {
+        var element = document.querySelector("div#openselect");
+        if (close) {
+            displayElement(element, false);
+        } else {
+            var anchorButton = document.querySelector("button#openselect");
+            var buttonRect = anchorButton.getBoundingClientRect();
+            log('fileSelect: anchorButton: ['+JSON.stringify(buttonRect)+'] fileSelector: ['+JSON.stringify(element.style)+']');
+            element.style.marginTop = ""+(buttonRect.top + buttonRect.height*2/3)+"px";
+            element.style.marginLeft = ""+(buttonRect.left + buttonRect.width/3)+"px";
+            var titleBadge = document.querySelector("div#openselect span#title");
+            if (titleBadge != null) {
+                if ('ls.count' in fileNav) {
+                    titleBadge.innerText = fileNav['ls.pwd'][0];
+                    displayElement(document.querySelector("div#openselect span#back").parentNode, true);
+                    listedFileEntries['count'] = insertFileEntries(listedFileEntries['ofs']);
+                    calculateTopBottom();
+                    displayElement(document.querySelector("div#openselect p#up"), listedFileEntries['ofs'] > 0);
+                    displayElement(document.querySelector("div#openselect p#down"), listedFileEntries['ofs'] + listedFileEntries['count'] < fileNav['ls.count'][0] + fileNav['ls.count'][1]);
+                } else {
+                    titleBadge.innerText = "Media directories:";
+                    displayElement(document.querySelector("div#openselect span#back").parentNode, false);
+                    listedFileEntries['count'] = insertFileEntries(listedFileEntries['ofs'], true);
+                    displayElement(document.querySelector("div#openselect p#up"), false);
+                    displayElement(document.querySelector("div#openselect p#down"), false);
+                }
+            } else {
+                log('fileSelect: titleBadge not found')
+            }
+            displayElement(element, true);
+            if (!fileEntryGeometry) {
+                var fileEntry = document.querySelector("div#openselect ul#list > li");
+                if (fileEntry) {
+                    fileEntryGeometry = fileEntry.getBoundingClientRect();
+                }
+            }
+        }
+    }
+    
+    function fileOpen(topic = null) {
+        if (topic != null) {
+            var filePath = document.querySelector("div#open_file input#media_path").value;
+            if ((filePath != null) && (filePath.length > 0)) {
+                if (filePath.endsWith('/')) {
+                    filePath = defaultFile(filePath);
+                    for (var test in mediaTypes[topic]) {
+                        if (Array.isArray(mediaTypes[topic][test])) {
+                            if (filePath.toLowerCase().endsWith(mediaTypes[topic][test][0].toLowerCase())) {
+                                filePath = mediaTypes[topic][test][1] + filePath.substring(0, filePath.length - mediaTypes[topic][test][0].length);
+                                break;
+                            }
+                        }
+                    }
+                }
+                interact(callParameters('open', topic, filePath), processResponse);
+            }
+        }
+    }
+    
+    function initialize() {
+        for (var app in playerApp) {
+            displayTopic(playerApp[app], false);
+        }
+        setInterval(requestStatus, 5000);
+        setTimeout(requestFileNav, 1000);
+        activateMediaTypes();
+    }
+    
+    window.onload = initialize;
+</script>
+<!-- ================================================================================== -->
+</body>
+
+</html> 
