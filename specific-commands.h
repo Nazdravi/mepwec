@@ -8,12 +8,14 @@
 #define CMD_PLAY		0x10
 #define CMD_DISPLAY		0x11
 #define CMD_OPEN		0x12
-#define CMD_CLOSE		0x13
-#define CMD_PATHS		0x14
+#define CMD_ENQUEUE		0x13
+#define CMD_CLOSE		0x14
+#define CMD_PATHS		0x15
 #define STR_HELP		"help|?"
 #define STR_PLAY		"playerctl|play"
 #define STR_DISPLAY		"display|disp"
 #define STR_OPEN		"open"
+#define STR_ENQUEUE		"enqueue|enq"
 #define STR_CLOSE		"close"
 #define STR_PATHS		"paths|path"
 
@@ -61,9 +63,10 @@
 #define EXIT_VIDEO		"killall vlc"
 #define COMMAND_FOTO		EXIT_SLIDESHOW"; "EXIT_FOTO"; gwenview -f '%s' &"
 #define COMMAND_AUDIO		"smplayer '%s' &"
+#define COMMAND_AUDIO_ENQUEUE	"smplayer -add-to-playlist '%s' &"
 #define COMMAND_VIDEO		"vlc -f '%s' &"
 #define COMMAND_ENTER		"(sleep 2; xte -x \":0.0\" 'key Return') &"
-#define PLAY_SLIDESHOW		"( if [ ! -f /tmp/SLIDESHOW ]; then touch /tmp/SLIDESHOW; while true; do playerctl %s next; sleep 15; done; fi ) &"
+#define PLAY_SLIDESHOW		"( if [ ! -f /tmp/SLIDESHOW ]; then touch /tmp/SLIDESHOW; while true; do playerctl %s next; sleep %s; done; fi ) &"
 #define PLAY_PLAYERCTL		"playerctl %s %s"
 #define PLAY_ALLSTATUS		"playerctl --list-all; echo '---'; playerctl --all-players status; echo '---'; playerctl --all-players metadata"
 #define COMMAND_DISPLAY		"vcgencmd display_power %s"
@@ -75,8 +78,9 @@
 				" "STR_EXIT""CONSOLE_LF \
 				" "STR_HELP""CONSOLE_LF \
 				" "STR_OPEN" "STR_FOTO"|"STR_AUDIO"|"STR_VIDEO" <FILE>"CONSOLE_LF \
+				" "STR_ENQUEUE" "STR_AUDIO" <FILE>"CONSOLE_LF \
 				" "STR_CLOSE" "STR_FOTO"|"STR_AUDIO"|"STR_VIDEO""CONSOLE_LF \
-				" "STR_PLAY" "STR_FOTO"|"STR_AUDIO"|"STR_VIDEO" "STR_START"|"STR_STOP"|"STR_PLAY"|"STR_PREVIOUS"|"STR_NEXT""CONSOLE_LF \
+				" "STR_PLAY" "STR_FOTO"|"STR_AUDIO"|"STR_VIDEO" "STR_START"|"STR_STOP"|"STR_PAUSE"|"STR_PLAY"|"STR_PREVIOUS"|"STR_NEXT""CONSOLE_LF \
 				" "STR_PLAY" "STR_LIST""CONSOLE_LF \
 				" "STR_PLAY" "STR_STATUS""CONSOLE_LF \
 				" "STR_PLAY" "STR_METADATA""CONSOLE_LF \
@@ -96,6 +100,7 @@ bool IsInPaths( char *File, char *Paths );
     else if	CHECK_CMD ( cmdline, STR_PLAY, CMD_PLAY, position, result );
     else if	CHECK_CMD ( cmdline, STR_DISPLAY, CMD_DISPLAY, position, result );
     else if	CHECK_CMD ( cmdline, STR_OPEN, CMD_OPEN, position, result );
+    else if	CHECK_CMD ( cmdline, STR_ENQUEUE, CMD_ENQUEUE, position, result );
     else if	CHECK_CMD ( cmdline, STR_CLOSE, CMD_CLOSE, position, result );
     else if	CHECK_CMD ( cmdline, STR_PATHS, CMD_PATHS, position, result );
 #endif
@@ -116,7 +121,7 @@ bool IsInPaths( char *File, char *Paths );
                     bool ok = false;
                     uint8_t media = PARAM_NONE, action = ACTION_NONE;
                     int position = 0;
-                    char *cmd = NULL, *player = NULL, *command = NULL;
+                    char *cmd = NULL, *player = NULL, *command = NULL, *interval = "15";
                     if (Ctx->par_str1) {
                         if	CHECK_CMD ( Ctx->par_str1, STR_FOTO, PARAM_FOTO, position, media );
                         else if	CHECK_CMD ( Ctx->par_str1, STR_AUDIO, PARAM_AUDIO, position, media );
@@ -134,6 +139,18 @@ bool IsInPaths( char *File, char *Paths );
                         else if	CHECK_CMD ( Ctx->par_str2, STR_PAUSE, ACTION_PAUSE, position, action );
                         else if	CHECK_CMD ( Ctx->par_str2, STR_PREVIOUS, ACTION_PREVIOUS, position, action );
                         else if	CHECK_CMD ( Ctx->par_str2, STR_NEXT, ACTION_NEXT, position, action );
+                        else if ((strlen(Ctx->par_str2) > 0) && (strlen(Ctx->par_str2) <= 4)) {
+                            bool digits = true, value = false;
+                            for (int idx = 0; idx < strlen(Ctx->par_str2); idx++) {
+                                if ((Ctx->par_str2[idx] >= '0') && (Ctx->par_str2[idx] <= '9')) {
+                                    if (Ctx->par_str2[idx] >= '1') value = true;
+                                } else {
+                                    digits = false;
+                                    break;
+                                }
+                            }
+                            if (value && digits) interval = Ctx->par_str2;
+                        }
                     }
                     switch (media) {
                         case PARAM_FOTO:
@@ -212,7 +229,7 @@ bool IsInPaths( char *File, char *Paths );
                                         os_run ( 0, cmd );
                                         break;
                                     default:
-                                        os_run ( 0, cmd, player ? player : "" );
+                                        os_run ( 0, cmd, player ? player : "", interval );
                                         break;
                                 }
                                 break;
@@ -263,7 +280,8 @@ bool IsInPaths( char *File, char *Paths );
                 }
                 break;
             case CMD_OPEN:
-                Log(10, "OPEN: %s %s", Ctx->par_str1 ? Ctx->par_str1 : "NULL", Ctx->par_str2 ? Ctx->par_str2 : "NULL" );
+            case CMD_ENQUEUE:
+                Log(10, "%s: %s %s", Ctx->cmd_type == CMD_OPEN ? "OPEN" : "ENQUEUE", Ctx->par_str1 ? Ctx->par_str1 : "NULL", Ctx->par_str2 ? Ctx->par_str2 : "NULL" );
                 {
                     bool ok = false;
                     uint8_t media = PARAM_NONE;
@@ -281,7 +299,7 @@ bool IsInPaths( char *File, char *Paths );
                             topic = "FOTO";
                             break;
                         case PARAM_AUDIO:
-                            cmd = COMMAND_AUDIO;
+                            cmd = (Ctx->cmd_type == CMD_OPEN ? COMMAND_AUDIO : COMMAND_AUDIO_ENQUEUE);
                             file_flags = S_IFREG;
                             topic = "AUDIO";
                             break;
@@ -304,6 +322,7 @@ bool IsInPaths( char *File, char *Paths );
                                 ok = true;
                                 konsole_print ( Ctx, MSG_OK );
                                 os_run ( 0, cmd, ParBuf );
+                                Log(0, cmd, ParBuf);
                                 if (cmd_post != NULL) {
                                     os_run ( 0, cmd_post );
                                 }

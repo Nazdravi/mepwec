@@ -19,7 +19,7 @@
 #define CONFIG_PATHS_LENGTH 8192
 
 #define CONSOLE_LF  "\r\n"
-#define CONSOLE_LINE_BUF_LEN 1024
+#define CONSOLE_LINE_BUF_LEN 2048
 
 /*!@addtogroup util
 */

@@ -73,7 +73,7 @@ struct tKonsoleContext {
     char *line_feed;
     ssize_t line_buf_len;
     char *cmd_str, *arg_str;
-    char par_str1[128], par_str2[128];
+    char par_str1[CONSOLE_LINE_BUF_LEN], par_str2[CONSOLE_LINE_BUF_LEN];
     bool cmd;
     uint8_t cmd_type;
 //    void *lock;
