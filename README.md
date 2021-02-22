@@ -16,6 +16,7 @@ Commands summary
  exit|ex|x|quit|q
  help|?
  open foto|photo|audio|video <FILE>
+ enqueue|enq audio <FILE>
  close foto|photo|audio|video
  playerctl|play foto|photo|audio|video start|play|stop|pause|playerctl|play|previous|prev|next
  playerctl|play list
