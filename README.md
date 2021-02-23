@@ -45,3 +45,16 @@ The server-side lua scripts add file browsing functionality `ls`-command to the 
 
 ### Index page / user interface
 `index.shtml` contains all client-side presentation stuff. This page uses SSI and is built on Bootstrap4 (at the moment nearly no work has been spent on design issues).
+
+## Example installation on Raspberry Pi
+Following packages were to be installed additionally (debian 10.8):
+```
+vlc gwenview smplayer-themes smplayer-l10n playerctl mpris-remote xautomation xdotool
+autofs screen minicom gcc make
+lua-nginx-websocket lua-posix lua-filesystem lua-bit32 lua-bitop
+```
+`"playersvc"` had to be compiled on the Pi itself (just `"make"` playersvc-Files). Should be executable by `"pi"`.
+
+When started from graphical user interface `"playersvc"` is ready to handle commands (connect with e.g. minicom to the pseudo terminal, see above). To autostart `"playersvc"` an entry `@lxterminal --command="<PATH TO APPLICATION>/playersvc"` in `~/.config/lxsession/LXDE-pi/autostart` (for user `"pi"`) is needed.
+
+Lua scripts and index page have to be installed into nginx as described above.
