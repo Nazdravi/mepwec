@@ -393,7 +393,7 @@ bool IsInPaths( char *File, char *Paths );
 
 #if defined SPECIFIC_COMMANDS_FUNCTIONS
 char *UrlDecode( const char *Encoded, char *Decode ) {
-    char *replace[][2] = {{"%20", " "}, {"%25", "%"}, {"%26", "&"}, {"%28", "("}, {"%29", ")"}, };
+    char *replace[][2] = {{"%C3%A4", "ä"}, {"%C3%B6", "ö"}, {"%C3%BC", "ü"}, {"%C3%9F", "ß"}, {"%C3%84", "Ä"}, {"%C3%96", "Ö"}, {"%C3%9C", "Ü"}, {"%20", " "}, {"%25", "%"}, {"%26", "&"}, {"%28", "("}, {"%29", ")"}, };
     if (Decode != NULL) {
         strcpy(Decode, "\0");
     }
