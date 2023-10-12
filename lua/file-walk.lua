@@ -1,4 +1,4 @@
--- (C) Arndt Kritzner, 2021
+-- (C) Arndt Kritzner, 2021,2022
 
 local _M = {}
 
@@ -66,7 +66,7 @@ function _M.ls(paths, command)
                         table.insert(directories, v .. '/')
                     end
                 else
-                    for k, ext in ipairs({ "jpg", "jpeg", "png", "mp3", "m3u", "mp4", "mpg", "mov", "flv", "vob" }) do
+                    for k, ext in ipairs({ "jpg", "jpeg", "png", "mp3", "m3u", "mka", "mp4", "mpg", "mov", "webm", "mkv", "flv", "vob" }) do
                         if string.match(string.lower(v), '%.' .. ext .. '$') then
                             table.insert(files, v)
                             break
