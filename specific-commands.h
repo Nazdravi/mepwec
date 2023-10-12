@@ -1,4 +1,4 @@
-// (C) Arndt Kritzner, 2021
+// (C) Arndt Kritzner, 2021, 2023
 
 /// \todo hier weitere Kommandos (info)
 #if defined(SPECIFIC_COMMANDS_DEFINITIONS)
@@ -393,7 +393,7 @@ bool IsInPaths( char *File, char *Paths );
 
 #if defined SPECIFIC_COMMANDS_FUNCTIONS
 char *UrlDecode( const char *Encoded, char *Decode ) {
-    char *replace[][2] = {{"%C3%A4", "ä"}, {"%C3%B6", "ö"}, {"%C3%BC", "ü"}, {"%C3%9F", "ß"}, {"%C3%84", "Ä"}, {"%C3%96", "Ö"}, {"%C3%9C", "Ü"}, {"%20", " "}, {"%25", "%"}, {"%26", "&"}, {"%28", "("}, {"%29", ")"}, };
+    char *replace[][2] = {{"%E2%A7%B8", "⧸"}, {"%EF%BC%9A", "："}, {"%EF%BD%9C", "｜"}, {"%C3%A4", "ä"}, {"%C3%B6", "ö"}, {"%C3%BC", "ü"}, {"%C3%9F", "ß"}, {"%C3%84", "Ä"}, {"%C3%96", "Ö"}, {"%C3%9C", "Ü"}, {"%20", " "}, {"%25", "%"}, {"%26", "&"}, {"%28", "("}, {"%29", ")"}, };
     if (Decode != NULL) {
         strcpy(Decode, "\0");
     }
