@@ -116,7 +116,7 @@
 
 
     <div id="hostname" class="float-right"><h4 class="px-2"><span class="badge badge-dark"><!--# echo var="host" default="no hostname" --></span></h4></div>
-    <h1><span class="badge badge-primary mr-2"><i class="fas fa-play-circle" ondblclick="displayError(true);"></i></span>Media Remote Control</h1>
+    <h1><span class="badge badge-primary mr-2"><i class="fas fa-play-circle" ondblclick="displayError(true);"></i></span>Media Player Web Control</h1>
     <p class="bg-dark text-white px-2">play and control photo, audio and video via web interface</p>
     <!-- file open section ================================================================================================================================ -->
     <div id="open_file" class="form-group border border-primary rounded-lg">
@@ -137,6 +137,7 @@
                     <div class="col-auto">
                         <button type="button" id="open_foto" class="btn btn-primary d-none" onclick="fileOpen('foto');">Foto</button>
                         <button type="button" id="open_audio" class="btn btn-primary ml-1 d-none" onclick="fileOpen('audio');">Audio</button>
+                        <button type="button" id="open_audio" class="btn btn-primary ml-1 d-none" onclick="fileOpen('audio', true);"><i class="fas fa-plus"></i></button>
                         <button type="button" id="open_video" class="btn btn-primary ml-1 d-none" onclick="fileOpen('video');">Video</button>
                     </div>
                 </div>
@@ -158,7 +159,8 @@
                     <button type="button" class="btn btn-primary" onclick="interact(callParameters('play', 'foto', 'prev'), processResponse);"><i class="fas fa-step-backward mx-2"></i></button>
                     <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'slideshow', 'stop'), processResponse);"><i class="fas fa-stop mx-2"></i></button>
                     <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'foto', 'next'), processResponse);"><i class="fas fa-step-forward mx-2"></i></button>
-                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'slideshow'), processResponse);"><i class="fas fa-forward mx-2"></i></button>
+                    <button type="button" class="btn btn-primary ml-1" onclick="interact(callParameters('play', 'slideshow', document.querySelector('div#foto input#slideshow_interval').value), processResponse);"><i class="fas fa-forward mx-2"></i></button>
+                    <input type="text" value="15" id="slideshow_interval" name="slideshowInterval" size="5" class="mx-1"><label for="slideshow_interval">s</label>
                 </p>
             </div>
         </div>
@@ -210,7 +212,7 @@
     var fileNav = null;
     var fileEntryGeometry = null;
     var listedFileEntries = { 'ofs':0, 'count':0, };
-    var mediaTypes = { 'foto':['.jpg', '.jpeg', '.png'], 'audio':['.mp3', '.m3u'], 'video':['.mp4', '.mpg', '.mov', '.flv', '.vob', 'video_ts/', /* ['video_ts/', 'dvd:/'] */ ],  };
+    var mediaTypes = { 'foto':['.jpg', '.jpeg', '.png'], 'audio':['.mp3', '.m3u', 'mka', ], 'video':['.mp4', '.mpg', '.mov', '.webm', '.mkv', '.flv', '.vob', 'video_ts/', /* ['video_ts/', 'dvd:/'] */ ],  };
     var defaultFiles = [ 'playlist.m3u', 'video_ts/' ];
 
 
@@ -222,9 +224,9 @@
     
     function callParameters(command = null, player = null, action = null) {
         var result = '';
-        if (command !== null) { result += (result === '' ? '?' : '&') + 'c=' + command; }
-        if (player !== null) { result += (result === '' ? '?' : '&') + 'p=' + player; }
-        if (action !== null) { result += (result === '' ? '?' : '&') + 'a=' + action; }
+        if (command !== null) { result += (result === '' ? '?' : '&') + 'c=' + command.replaceAll('&', '%26'); }
+        if (player !== null) { result += (result === '' ? '?' : '&') + 'p=' + player.replaceAll('&', '%26'); }
+        if (action !== null) { result += (result === '' ? '?' : '&') + 'a=' + action.replaceAll('&', '%26'); }
         return result;
     }
     
@@ -302,7 +304,7 @@
     
     function formatTitle(url) {
         var result = url;
-        var urlCodes = { '%20':' ', '%25':'%', '%26':'&', '%28':'(', '%29':')', };
+        var urlCodes = { '%20':' ', '%25':'%', '%26':'&', '%28':'(', '%29':')', '%2C':',', '%5B':'[', '%5D':']', '%C3%9F':'ß', '%E2%A7%B8':'/', '%EF%BC%9A':':', '%EF%BD%9C':'|'};
         for (const [key, value] of Object.entries(urlCodes)) {
             result = result.replaceAll(key, value);
         }
@@ -510,6 +512,10 @@
                 } else {
                     button.innerText = fileNav['ls.files'][idx - fileNav['ls.range'][0] - (('ls.dirs' in fileNav) ? fileNav['ls.dirs'].length : 0)];
                 }
+                if (button.innerText == 'undefined') {
+                    fileListOffset();
+                    break;
+                }
                 list.appendChild(clone);
                 result++;
             }
@@ -623,7 +629,7 @@
             }
         }
         for (var topic in mediaTypes) {
-            displayElement(document.querySelector("div#open_file button#open_"+topic), result == topic);
+            document.querySelectorAll("div#open_file button#open_"+topic).forEach( function(element_) { displayElement(element_, result == topic); } );
         }
         return result;
     }
@@ -685,7 +691,7 @@
         }
     }
     
-    function fileOpen(topic = null) {
+    function fileOpen(topic = null, enqueue = false) {
         if (topic != null) {
             var filePath = document.querySelector("div#open_file input#media_path").value;
             if ((filePath != null) && (filePath.length > 0)) {
@@ -700,7 +706,7 @@
                         }
                     }
                 }
-                interact(callParameters('open', topic, filePath), processResponse);
+                interact(callParameters((enqueue == false ? 'open' : 'enqueue'), topic, filePath), processResponse);
             }
         }
     }
